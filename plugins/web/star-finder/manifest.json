@@ -1,0 +1,42 @@
+{
+  "id": "com.memomind.star-finder",
+  "name": "Star Finder",
+  "version": "0.1.0",
+  "entry": "index.html",
+  "bridgeVersion": "2.0",
+  "permissions": [
+    {
+      "name": "location.foreground",
+      "required": true,
+      "reason": "Work out which stars are above your horizon right now"
+    },
+    {
+      "name": "device.messaging",
+      "required": true,
+      "reason": "Send sky coordinates to the Star Finder glasses plugin",
+      "scope": {
+        "channels": [3841, 3842]
+      }
+    },
+    {
+      "name": "device.info",
+      "required": false
+    },
+    {
+      "name": "storage",
+      "required": false
+    }
+  ],
+  "deviceRequirements": {
+    "preferredPluginId": "com.memomind.star-finder",
+    "requiredPluginId": "com.memomind.star-finder",
+    "protocols": [
+      {
+        "id": "gm.star-finder",
+        "minVersion": "1.0"
+      }
+    ]
+  },
+  "schemaVersion": 2,
+  "permissionPolicyVersion": 1
+}

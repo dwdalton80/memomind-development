@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta http-equiv="Content-Security-Policy"
+        content="default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; connect-src 'none'; object-src 'none'; frame-src 'none'; base-uri 'none'">
+  <title>Star Finder</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <main>
+    <header>
+      <h1>Star Finder</h1>
+      <p id="state">Connecting to the glasses…</p>
+    </header>
+
+    <section class="panel" id="alignment">
+      <h2>Alignment</h2>
+      <p class="muted" id="alignHint">Waiting for your location…</p>
+      <ol class="steps" id="alignSteps"></ol>
+      <button id="realign" disabled>Start alignment again</button>
+    </section>
+
+    <section class="panel">
+      <h2>Head <span class="muted">(live from the glasses)</span></h2>
+      <dl class="readout">
+        <div><dt>Altitude</dt><dd id="headAlt">—</dd></div>
+        <div><dt>Azimuth</dt><dd id="headAz">—</dd></div>
+        <div><dt>To target</dt><dd id="headSep">—</dd></div>
+      </dl>
+    </section>
+
+    <section class="panel">
+      <h2>Above you now <span class="muted" id="visibleCount"></span></h2>
+      <ul class="targets" id="targets"></ul>
+    </section>
+
+    <pre id="log"></pre>
+  </main>
+  <script type="module" src="plugin.js"></script>
+</body>
+</html>

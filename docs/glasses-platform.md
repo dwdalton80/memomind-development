@@ -22,6 +22,24 @@ this file is the orientation layer and records what was verified by hand.
 Never hard-code the resolution. Call `host->display_get_info()` — geometry is a
 runtime capability and the examples all treat it that way.
 
+### IMU axes
+
+The sensor is mounted rotated with respect to the wearer, and this is not
+written down in the headers — it is only visible in the examples:
+
+- **Yaw** (turning the head left/right) is `gyro_raw[0] - gyro_raw[1]`,
+  positive turning right. Horizontal motion projects onto X and Y with
+  opposite signs, so subtracting combines both components. See the comment in
+  `.sdk/GlassSDK/examples/game/snake/snake.c`.
+- **Pitch rate** (raising/lowering) is `gyro_raw[2]`, positive raising.
+- **Absolute pitch** is `pitch_degrees` — resolved from gravity by the Host,
+  drift-free, whole degrees, positive looking up.
+
+There is **no magnetometer**. Absolute heading is therefore not observable
+from a single sample; it can only be integrated, and the raw counts-per-degree
+is undocumented. `plugins/glass/star_finder` works around both at once with a
+two-point alignment.
+
 ## Two plugin kinds
 
 **Glasses plugin (`.gmp`)** — RV32 position-independent C, runs on the device.

@@ -22,6 +22,7 @@ BUILD = ROOT / "build"
 GLASS_SRC = ROOT / "plugins" / "glass"
 WEB_SRC = ROOT / "plugins" / "web"
 TEMPLATES = ROOT / "templates"
+TESTS = ROOT / "tests"
 
 SKIP_DIRS = {".git", ".build", "build", "dist", "node_modules", "__pycache__"}
 
@@ -266,6 +267,59 @@ def cmd_studio(args) -> int:
                cwd=SDK / "PhoneSDK", check=False).returncode
 
 
+def cmd_test(args) -> int:
+    """Run the host-side test suites declared in tests/tests.json.
+
+    These cover logic that can be checked without hardware - integer math,
+    coordinate conversion - which matters here because the glasses simulator
+    is not published for Linux.
+    """
+    manifest = TESTS / "tests.json"
+    if not manifest.is_file():
+        print("No tests/tests.json; nothing to run.")
+        return 0
+
+    suites = json.loads(manifest.read_text())
+    if args.names:
+        suites = [s for s in suites if s["name"] in args.names]
+        if not suites:
+            die(f"no test suite matched: {', '.join(args.names)}")
+
+    scratch = BUILD / "tests"
+    scratch.mkdir(parents=True, exist_ok=True)
+    failed = []
+
+    for suite in suites:
+        print(f"\n=== {suite['name']}: {suite.get('description', '')} ===")
+        if suite["kind"] == "c":
+            compiler = os.environ.get("CC", "cc")
+            binary = scratch / suite["name"]
+            command = [compiler, "-std=c99", "-Wall", "-Wextra", "-Werror", "-O1"]
+            for directory in suite.get("include", []):
+                command += ["-I", str(ROOT / directory)]
+            command += ["-o", str(binary)]
+            command += [str(ROOT / source) for source in suite["sources"]]
+            if run(command, check=False).returncode != 0:
+                failed.append(suite["name"])
+                continue
+            if run([str(binary)], check=False, quiet=True).returncode != 0:
+                failed.append(suite["name"])
+        elif suite["kind"] == "node":
+            if run(["node", str(ROOT / suite["entry"])], check=False,
+                   quiet=True).returncode != 0:
+                failed.append(suite["name"])
+        else:
+            die(f"unknown test kind: {suite['kind']}")
+
+    print()
+    if failed:
+        for name in failed:
+            print(f"FAILED  {name}")
+        return 1
+    print(f"{len(suites)} suite(s) passed")
+    return 0
+
+
 def cmd_clean(args) -> int:
     if BUILD.exists():
         shutil.rmtree(BUILD)
@@ -349,6 +403,10 @@ def main(argv) -> int:
     p.add_argument("name", nargs="?")
     p.add_argument("--port", type=int, default=4173)
     p.set_defaults(func=cmd_studio)
+
+    p = sub.add_parser("test", help="run host-side test suites")
+    p.add_argument("names", nargs="*")
+    p.set_defaults(func=cmd_test)
 
     p = sub.add_parser("clean", help="remove build outputs")
     p.set_defaults(func=cmd_clean)

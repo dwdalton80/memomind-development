@@ -1,0 +1,18 @@
+[
+  {
+    "name": "orientation",
+    "description": "Star Finder head-tracking math (native C)",
+    "kind": "c",
+    "include": ["plugins/glass/star_finder"],
+    "sources": [
+      "tests/orientation_test.c",
+      "plugins/glass/star_finder/orientation.c"
+    ]
+  },
+  {
+    "name": "sky",
+    "description": "Star Finder coordinate conversion (node)",
+    "kind": "node",
+    "entry": "tests/sky_test.mjs"
+  }
+]
