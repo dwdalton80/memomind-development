@@ -1,0 +1,5 @@
+{
+  "repo": "https://github.com/memomind-open/plugin-open-platform",
+  "commit": "5a1f34ae2430821e30ada9d46bda84acf8fa4fba",
+  "note": "Pinned Plugin Open Platform checkout. ./mm setup restores it into .sdk/; ./mm setup --update moves the pin forward."
+}

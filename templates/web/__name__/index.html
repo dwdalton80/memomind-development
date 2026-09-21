@@ -1,0 +1,23 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta http-equiv="Content-Security-Policy"
+        content="default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; connect-src 'none'; object-src 'none'; frame-src 'none'; base-uri 'none'">
+  <title>__NAME__</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <main>
+    <h1>__NAME__</h1>
+    <p id="state">Waiting for the Bridge…</p>
+    <div class="actions">
+      <button id="draw">Draw on glasses</button>
+      <button id="events">Subscribe to device events</button>
+    </div>
+    <pre id="log"></pre>
+  </main>
+  <script type="module" src="plugin.js"></script>
+</body>
+</html>

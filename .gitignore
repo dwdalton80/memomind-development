@@ -1,0 +1,22 @@
+# Vendored SDK checkout (restore with ./mm setup)
+/.sdk/
+
+# Build outputs
+/build/
+.build/
+dist/
+
+# Node
+node_modules/
+
+# Python
+__pycache__/
+*.pyc
+
+# Editor / OS
+.DS_Store
+.vscode/
+.idea/
+
+# Generated: the Web SDK is vendored into each web plugin by ./mm build
+plugins/web/*/vendor/
