@@ -1,0 +1,55 @@
+# Star Finder walkthrough.
+#
+# Drives the plugin from cold start through a two-star alignment to a target
+# lock, snapshotting each screen. Regenerate with the script in this file's
+# git history if the wire format changes.
+
+display 600 350
+start
+imu pitch=28 gx=0 gy=0 gz=0
+loop 100
+snap waiting-for-phone
+
+# The phone pushes both alignment references.
+bt 0F01 53 01 01 00 0e 0b 1c 3e 52 69 67 65 6c
+bt 0F01 53 01 01 01 60 09 a8 7a 44 65 6e 65 62
+loop 100
+snap align-1-rigel
+
+# Sight Rigel and click.
+button single
+loop 100
+snap align-2-deneb
+
+# Turn the head 155 degrees to Deneb at about 50 deg/s, then click.
+imu pitch=26 gx=410 gy=-410
+loop 3100
+imu pitch=24 gx=0 gy=0 gz=0
+loop 100
+button single
+loop 100
+snap calibrated
+
+# Pick a target well off to one side.
+bt 0F01 53 01 02 00 94 11 d0 84 56 65 67 61
+loop 100
+snap finding-far
+
+# Sweep 26 degrees onto it and raise the head to match.
+imu pitch=30 gx=246 gy=-246
+loop 500
+imu pitch=38 gx=246 gy=-246 gz=0
+loop 380
+imu pitch=45 gx=0 gy=0 gz=0
+loop 200
+snap on-target
+
+# The glasses report their state back to the phone throughout.
+expect-uplink 3
+
+# Double-click discards the calibration and starts alignment over.
+button double
+loop 100
+snap realigned
+
+stop

@@ -10,25 +10,18 @@
  */
 import { createGMPlugin } from './vendor/gm-plugin-web-sdk.esm.js';
 import { STARS } from './catalog.js';
-import { horizontal, chooseAlignmentPair, shortestAzimuth } from './sky.js';
-
-const CHANNEL_TO_GLASSES = 0x0f01;
-const CHANNEL_TO_PHONE = 0x0f02;
-const MAGIC = 0x53;
-const VERSION = 1;
-const MSG_ALIGN_REF = 1;
-const MSG_TARGET = 2;
-const MSG_RESET = 3;
-const NAME_MAX = 24;
-const UNKNOWN = 0xffff;
+import { horizontal, chooseAlignmentPair } from './sky.js';
+import {
+  CHANNEL_TO_GLASSES, CHANNEL_TO_PHONE, MAGIC, VERSION,
+  MSG_ALIGN_REF, MSG_TARGET, MSG_RESET, STATE_NAMES,
+  encode, decodeState,
+} from './wire.js';
 
 /* Re-send sky coordinates on this cadence. The sky turns 15 arcmin a minute,
  * so a few seconds keeps the glasses well inside their own pointing error,
  * and repeating makes the link self-healing if a message is dropped. */
 const PUSH_INTERVAL_MS = 4000;
 const MIN_ALTITUDE = 5;
-
-const STATE_NAMES = ['waiting for sky data', 'aligning (1 of 2)', 'aligning (2 of 2)', 'finding'];
 
 const $ = (selector) => document.querySelector(selector);
 const gm = createGMPlugin();
@@ -70,23 +63,6 @@ function visibleNow() {
 
 /* ------------------------------------------------------------ the wire -- */
 
-function encode(type, slot, altitude, azimuth, name) {
-  const bytes = new TextEncoder().encode(name).slice(0, NAME_MAX);
-  const message = new Uint8Array(8 + bytes.length);
-  const view = new DataView(message.buffer);
-  const alt = Math.max(-9000, Math.min(9000, Math.round(altitude * 100)));
-  const az = ((Math.round(azimuth * 100) % 36000) + 36000) % 36000;
-
-  message[0] = MAGIC;
-  message[1] = VERSION;
-  message[2] = type;
-  message[3] = slot;
-  view.setInt16(4, alt, true);
-  view.setUint16(6, az, true);
-  message.set(bytes, 8);
-  return message;
-}
-
 async function send(message) {
   if (!messagingReady) return;
   try {
@@ -115,20 +91,9 @@ async function pushSky() {
 }
 
 function handleGlassesMessage(message) {
-  const data = message.data;
-  if (!(data instanceof Uint8Array) || data.length < 10) return;
-  if (data[0] !== MAGIC || data[1] !== VERSION) return;
-
-  const view = new DataView(data.buffer, data.byteOffset, data.byteLength);
-  const azimuth = view.getUint16(6, true);
-  const separation = view.getUint16(8, true);
-
-  glasses = {
-    state: data[3],
-    altitude: view.getInt16(4, true) / 100,
-    azimuth: azimuth === UNKNOWN ? null : azimuth / 100,
-    separation: separation === UNKNOWN ? null : separation / 100,
-  };
+  const report = decodeState(message.data);
+  if (!report) return;
+  glasses = report;
   renderGlasses();
   renderAlignment();
 }

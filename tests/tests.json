@@ -3,7 +3,9 @@
     "name": "orientation",
     "description": "Star Finder head-tracking math (native C)",
     "kind": "c",
-    "include": ["plugins/glass/star_finder"],
+    "include": [
+      "plugins/glass/star_finder"
+    ],
     "sources": [
       "tests/orientation_test.c",
       "plugins/glass/star_finder/orientation.c"
@@ -14,5 +16,11 @@
     "description": "Star Finder coordinate conversion (node)",
     "kind": "node",
     "entry": "tests/sky_test.mjs"
+  },
+  {
+    "name": "wire",
+    "description": "Star Finder glasses/phone protocol (node)",
+    "kind": "node",
+    "entry": "tests/wire_test.mjs"
   }
 ]

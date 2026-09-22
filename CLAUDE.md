@@ -20,6 +20,7 @@ SDK tree.
 ./mm build            # everything
 ./mm build hello_hud  # one plugin
 ./mm test             # host-side test suites
+./mm sim star_finder  # render a glasses plugin's screens on this machine
 ```
 
 A glasses build prints its real budget usage — read it, it is the fastest
@@ -84,12 +85,21 @@ checks sidereal time at a known epoch, Polaris tracking latitude, and
 meridian transits landing due north or south — all of which stay meaningful
 without a reference ephemeris to diff against.
 
+`./mm sim <plugin>` renders a glasses plugin's screens by compiling it
+natively against a mock Host (`tools/simstudio/`). Use it to see a UI change
+and to catch lifecycle violations — it fails the run if objects survive
+`on_stop`. Read `tools/simstudio/README.md` for its limits before trusting a
+frame: text metrics are DejaVu, not the firmware font, and nothing about the
+RV32 ABI or hardware is exercised. Never describe a simstudio frame as the
+app running on the glasses.
+
 ## Before claiming something works
 
-`./mm build` and `./mm test` must both pass. There is no glasses simulator on
-Linux (`.sdk/Studio/linux/` is an empty placeholder in this SDK release), so
-that is the strongest local signal — say so plainly rather than implying the
-app was seen running on a device.
+`./mm build` and `./mm test` must both pass. MemoMind publishes no Linux build
+of Desktop Studio (`.sdk/Studio/linux/` holds only a `.gitkeep`, and the
+repository has no releases), so a clean build, passing tests and a simstudio
+frame are the strongest local signals — say so plainly rather than implying
+the app was seen running on a device.
 
 ## Copy before inventing
 

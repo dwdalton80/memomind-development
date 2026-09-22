@@ -9,6 +9,7 @@ the sky. Neither half is useful alone.
 ```sh
 ./mm build star_finder   # -> build/glass/star_finder/star_finder.gmp
 ./mm test orientation    # the head-tracking math, on this machine
+./mm sim star_finder     # render every screen -> build/sim/star_finder/
 ```
 
 ## Why there is an alignment step
@@ -61,6 +62,11 @@ absolute to check itself against.
 the only place a sign error or a silent overflow surfaces before hardware.
 It feeds synthetic sweeps at four plausible gyro full-scale ranges and
 asserts the estimator recovers each one.
+
+`./mm sim star_finder` walks the whole app — cold start, both alignment
+sightings, a target lock and a re-align — and renders each screen. The bytes
+it captures on the uplink channel are the fixtures `tests/wire_test.mjs`
+decodes, which is how the two halves are kept honest about the wire format.
 
 ## Arithmetic notes
 

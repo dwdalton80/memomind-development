@@ -23,6 +23,7 @@ GLASS_SRC = ROOT / "plugins" / "glass"
 WEB_SRC = ROOT / "plugins" / "web"
 TEMPLATES = ROOT / "templates"
 TESTS = ROOT / "tests"
+SIMSTUDIO = ROOT / "tools" / "simstudio"
 
 SKIP_DIRS = {".git", ".build", "build", "dist", "node_modules", "__pycache__"}
 
@@ -320,6 +321,67 @@ def cmd_test(args) -> int:
     return 0
 
 
+def cmd_sim(args) -> int:
+    """Run a glasses plugin against the mock Host and render what it drew.
+
+    MemoMind publishes no Linux build of Desktop Studio, so this is the only
+    way to look at a plugin's screens on this machine. It exercises the
+    lifecycle, the state machine and layout - not the RV32 ABI, real LVGL
+    metrics, or anything about hardware.
+    """
+    need_sdk()
+    plugins = select(discover(GLASS_SRC), GLASS_SRC, [args.name] if args.name else [])
+    if not plugins:
+        die(f"no glasses plugin named {args.name}" if args.name
+            else "no glasses plugins in this workspace")
+    plugin = plugins[0]
+    name = plugin.name
+
+    scenario = SIMSTUDIO / "scenarios" / f"{name}.sim"
+    if not scenario.is_file():
+        die(f"no scenario at {scenario.relative_to(ROOT)} - write one first "
+            f"(see {(SIMSTUDIO / 'README.md').relative_to(ROOT)})")
+
+    output = BUILD / "sim" / name
+    if output.exists():
+        shutil.rmtree(output)
+    output.mkdir(parents=True, exist_ok=True)
+
+    print(f"=== simulating {name} ===")
+    binary = output / "sim"
+    command = [os.environ.get("CC", "cc"), "-std=gnu99", "-Wall", "-Wextra", "-O1",
+               "-I", str(SDK / "GlassSDK" / "include"),
+               "-I", str(SIMSTUDIO), "-I", str(plugin),
+               "-o", str(binary),
+               str(SIMSTUDIO / "sim_host.c"), str(SIMSTUDIO / "sim_main.c")]
+    command += [str(source) for source in sorted(plugin.glob("*.c"))]
+    if run(command, check=False).returncode != 0:
+        return 1
+
+    driver = [str(binary), str(scenario), str(output)]
+    if args.verbose:
+        driver.append("--verbose")
+    if run(driver, check=False, quiet=True).returncode != 0:
+        return 1
+
+    frames = sorted(output.glob("*.json"))
+    if not frames:
+        print("No frames were captured; the scenario has no snap commands.")
+        return 0
+
+    render = [sys.executable, str(SIMSTUDIO / "render.py")]
+    render += [str(frame) for frame in frames]
+    render += ["--scale", str(args.scale),
+               "--contact-sheet", str(output / "contact-sheet.png")]
+    if run(render, check=False, quiet=True).returncode != 0:
+        print("mm: rendering failed; the display lists are still in "
+              f"{output.relative_to(ROOT)}/", file=sys.stderr)
+        return 1
+
+    print(f"\nFrames in {output.relative_to(ROOT)}/")
+    return 0
+
+
 def cmd_clean(args) -> int:
     if BUILD.exists():
         shutil.rmtree(BUILD)
@@ -407,6 +469,12 @@ def main(argv) -> int:
     p = sub.add_parser("test", help="run host-side test suites")
     p.add_argument("names", nargs="*")
     p.set_defaults(func=cmd_test)
+
+    p = sub.add_parser("sim", help="render a glasses plugin's screens on this machine")
+    p.add_argument("name", nargs="?")
+    p.add_argument("--scale", type=int, default=1)
+    p.add_argument("--verbose", action="store_true", help="show plugin log output")
+    p.set_defaults(func=cmd_sim)
 
     p = sub.add_parser("clean", help="remove build outputs")
     p.set_defaults(func=cmd_clean)
