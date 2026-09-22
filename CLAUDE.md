@@ -21,7 +21,14 @@ SDK tree.
 ./mm build hello_hud  # one plugin
 ./mm test             # host-side test suites
 ./mm sim star_finder  # render a glasses plugin's screens on this machine
+./mm stage            # lay the workspace out for Desktop Studio's importer
 ```
+
+Desktop Studio 0.1.0 has no file browser on its plugin dropdowns, whatever
+`Studio/README.md` says about an Import package button: they list only what
+an Import workspace scan found, below `GlassSDK/` and `PhoneSDK/`. `./mm
+stage` is the bridge from this layout to that one. Do not move plugin
+sources into `.sdk/` to work around it — that checkout is disposable.
 
 A glasses build prints its real budget usage — read it, it is the fastest
 signal that a change is getting expensive:

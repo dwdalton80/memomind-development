@@ -53,6 +53,7 @@ build/                     build output (git-ignored)
 | `./mm build [name...]` | Build everything, or just the named plugins |
 | `./mm test [name...]` | Run the host-side test suites in `tests/` |
 | `./mm sim <name>` | Run a glasses plugin here and render its screens |
+| `./mm stage` | Lay the workspace out for Studio's Import workspace |
 | `./mm studio [name]` | Run PhoneSDK Browser Studio for a web plugin |
 | `./mm clean` | Remove build output (leaves `.sdk/` and the toolchain cache) |
 | `./mm doctor` | Check the toolchain, SDK pin, and workspace |
@@ -71,9 +72,15 @@ them. Keep them in the same directory when moving a build around.
 
 **Desktop Studio** (the full simulator, runs a `.gmp` and a `.mmpkg` together
 against a 600 x 350 virtual display) ships only for macOS and Windows in the
-current SDK release — `.sdk/Studio/linux/` is an empty placeholder. Use its
-**Import package** button on `build/` output; plugins do not need to live
-inside the SDK tree.
+current SDK release — `.sdk/Studio/linux/` is an empty placeholder.
+
+`Studio/README.md` describes an **Import package** button, but the shipped
+0.1.0 application has no such button and its plugin dropdowns list only what
+an **Import workspace** scan discovered. That scan looks one to three levels
+below `GlassSDK/` and `PhoneSDK/`, and this workspace keeps plugin sources
+outside the SDK tree — so run `./mm stage`, which builds
+`build/studio-workspace.zip` with everything laid out where the scan expects
+it, plus two of the SDK's own examples as known-good controls.
 
 **PhoneSDK Browser Studio** (`./mm studio <name>`) is Node-based and runs
 anywhere, but simulates the Bridge only — it cannot execute `.gmp` files.

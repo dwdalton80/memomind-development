@@ -382,6 +382,117 @@ def cmd_sim(args) -> int:
     return 0
 
 
+def cmd_stage(args) -> int:
+    """Lay this workspace out the way Desktop Studio's importer expects.
+
+    Studio 0.1.0 has no file browser: its plugin dropdowns list only what an
+    "Import workspace" scan discovered, and that scan looks one to three
+    levels below GlassSDK/ and PhoneSDK/. Our plugin sources deliberately
+    live outside the SDK tree, so this builds a disposable tree that puts
+    them where Studio will find them.
+
+    A couple of the SDK's own examples come along as controls: if those run
+    and ours does not, the problem is ours rather than the import path.
+    """
+    need_sdk()
+    staging = BUILD / "workspace"
+    if staging.exists():
+        shutil.rmtree(staging)
+
+    skip = shutil.ignore_patterns(".git", ".build", "node_modules", "dist",
+                                  "__pycache__", "*.pyc")
+    print("Copying the SDK (without its examples and prebuilt bundles)")
+    for sdk_name in ("GlassSDK", "PhoneSDK"):
+        source = SDK / sdk_name
+        destination = staging / sdk_name
+        shutil.copytree(source, destination,
+                        ignore=lambda d, names: set(skip(d, names)) |
+                        ({"examples"} if Path(d) == source else set()))
+
+    # Studio expects its own layout, so keep the sibling directories present.
+    for platform in ("linux", "macos", "windows"):
+        (staging / "Studio" / platform).mkdir(parents=True, exist_ok=True)
+        (staging / "Studio" / platform / ".gitkeep").write_text("")
+
+    glass_examples = staging / "GlassSDK" / "examples"
+    web_examples = staging / "PhoneSDK" / "examples"
+    glass_examples.mkdir(parents=True, exist_ok=True)
+    web_examples.mkdir(parents=True, exist_ok=True)
+    built = BUILD / "glass"
+
+    staged = []
+    for plugin in discover(GLASS_SRC):
+        name = plugin.name
+        shutil.copytree(plugin, glass_examples / name, ignore=skip)
+        output = built / name
+        if not (output / f"{name}.gmp").is_file():
+            print(f"mm: {name} is not built; run ./mm build first", file=sys.stderr)
+            return 1
+        # Studio loads the package from the matching .build directory.
+        shutil.copytree(output, staging / "GlassSDK" / "build-host" / ".build" / name)
+        staged.append(f"GlassSDK/examples/{name}")
+
+    for plugin in discover(WEB_SRC):
+        shutil.copytree(plugin, web_examples / plugin.name, ignore=skip)
+        staged.append(f"PhoneSDK/examples/{plugin.name}")
+
+    for control in args.controls:
+        source = SDK / "GlassSDK" / "examples" / control
+        package = SDK / "GlassSDK" / "build-host" / ".build" / control
+        if not source.is_dir() or not package.is_dir():
+            print(f"mm: no SDK control example '{control}'", file=sys.stderr)
+            continue
+        shutil.copytree(source, glass_examples / control, ignore=skip)
+        shutil.copytree(package,
+                        staging / "GlassSDK" / "build-host" / ".build" / control)
+        staged.append(f"GlassSDK/examples/{control}  (SDK control)")
+
+    (staging / "HOW-TO-IMPORT.txt").write_text(
+        "MemoMind Plugin Studio - import this directory\n"
+        "==============================================\n\n"
+        "Studio 0.1.0 has no file browser on its plugin dropdowns: they list\n"
+        "only what an Import workspace scan found. This tree is laid out the\n"
+        "way that scan expects.\n\n"
+        "  1. Unzip this somewhere permanent (not a temporary folder).\n"
+        "  2. Studio -> Import workspace -> select the unzipped directory\n"
+        "     (the one holding GlassSDK, PhoneSDK and Studio).\n"
+        "  3. Glass plugin dropdown  -> star_finder\n"
+        "     Phone plugin dropdown  -> star-finder\n\n"
+        "Controls, once the glasses half loads:\n"
+        "  Press once      confirm an alignment sighting\n"
+        "  Press twice     discard the calibration and align again\n"
+        "  Press hold 1s   exit\n"
+        "  Head motion     the circular pad; alignment needs a big sweep\n\n"
+        "Order of operations:\n"
+        "  1. On the phone half, set your coordinates and press\n"
+        "     'Use these coordinates'. A star list should appear.\n"
+        "  2. The glasses show 'Align 1 of 2: <star>'. Point at its bearing\n"
+        "     using the head-motion pad, then press once.\n"
+        "  3. Swing the head a long way to the second star - the two\n"
+        "     sightings must be at least 30 degrees apart in azimuth or the\n"
+        "     calibration is rejected and alignment restarts. Press once.\n"
+        "  4. Pick a target from the phone list and follow the marker.\n\n"
+        "If star_finder will not load, try the SDK's own lvgl_ui or input\n"
+        "example from the same dropdown. Those are known-good controls: if\n"
+        "they run and star_finder does not, the fault is in star_finder.\n"
+        "The reason will be in GLASS SIMULATOR LOGS -> Open Log.\n")
+
+    archive = None
+    if not args.no_zip:
+        archive = shutil.make_archive(str(BUILD / "studio-workspace"), "zip",
+                                      root_dir=staging)
+
+    print(f"\nStaged into {staging.relative_to(ROOT)}/")
+    for entry in staged:
+        print(f"  {entry}")
+    if archive:
+        size = Path(archive).stat().st_size
+        print(f"\n{Path(archive).relative_to(ROOT)}  ({size // 1024} KiB)")
+    print("\nIn Studio: Import workspace -> select this directory, then pick "
+          "the plugins from the two dropdowns.")
+    return 0
+
+
 def cmd_clean(args) -> int:
     if BUILD.exists():
         shutil.rmtree(BUILD)
@@ -475,6 +586,13 @@ def main(argv) -> int:
     p.add_argument("--scale", type=int, default=1)
     p.add_argument("--verbose", action="store_true", help="show plugin log output")
     p.set_defaults(func=cmd_sim)
+
+    p = sub.add_parser("stage",
+                       help="lay the workspace out for Studio's Import workspace")
+    p.add_argument("--controls", nargs="*", default=["lvgl_ui", "input"],
+                   help="SDK examples to include as known-good controls")
+    p.add_argument("--no-zip", action="store_true")
+    p.set_defaults(func=cmd_stage)
 
     p = sub.add_parser("clean", help="remove build outputs")
     p.set_defaults(func=cmd_clean)
