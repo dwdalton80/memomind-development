@@ -191,12 +191,57 @@ function refreshSky() {
   renderAlignment();
 }
 
+/*
+ * Adopt an observer position, from wherever it came.
+ *
+ * Manual entry is not only a fallback for a denied permission: Desktop Studio
+ * does not simulate the location Bridge, and the sky is unusable indoors
+ * anyway, so being able to type coordinates is what makes the app testable.
+ */
+function applySite(latitude, longitude, source) {
+  if (!Number.isFinite(latitude) || !Number.isFinite(longitude) ||
+      Math.abs(latitude) > 90 || Math.abs(longitude) > 180) {
+    $('#locationState').textContent = 'Those coordinates are out of range.';
+    return false;
+  }
+  site = { latitude, longitude };
+  $('#lat').value = latitude.toFixed(4);
+  $('#lon').value = longitude.toFixed(4);
+  $('#locationState').textContent =
+    `${Math.abs(latitude).toFixed(3)}° ${latitude < 0 ? 'S' : 'N'}, ` +
+    `${Math.abs(longitude).toFixed(3)}° ${longitude < 0 ? 'W' : 'E'} (${source})`;
+  log(`location ${latitude.toFixed(3)}, ${longitude.toFixed(3)} (${source})`);
+  refreshSky();
+  pushSky().catch((error) => log(`push failed: ${error?.message ?? error}`));
+  return true;
+}
+
 async function locate() {
+  $('#locationState').textContent = 'Locating…';
   const position = await gm.location.getCurrentPosition({ timeoutMs: 15000 });
   const coords = position?.coords ?? position;
-  site = { latitude: coords.latitude, longitude: coords.longitude };
-  log(`location ${site.latitude.toFixed(3)}, ${site.longitude.toFixed(3)}`);
-  refreshSky();
+  applySite(coords.latitude, coords.longitude, 'phone');
+  remember(site).catch(() => {});
+}
+
+/* Storage is declared optional, so never let its absence break startup. */
+async function remember(value) {
+  try {
+    await gm.storage.set('site', value);
+  } catch {
+    /* not granted, or no storage in this Host */
+  }
+}
+
+async function recall() {
+  try {
+    const stored = await gm.storage.get('site');
+    const value = stored?.value;
+    if (value) return applySite(value.latitude, value.longitude, 'saved');
+  } catch {
+    /* fall through to locating */
+  }
+  return false;
 }
 
 async function main() {
@@ -212,14 +257,28 @@ async function main() {
     await send(new Uint8Array([MAGIC, VERSION, MSG_RESET, 0, 0, 0, 0, 0]));
     log('alignment reset');
   });
+  $('#useManual').addEventListener('click', () => {
+    if (applySite(Number($('#lat').value), Number($('#lon').value), 'entered'))
+      remember(site).catch(() => {});
+  });
+  $('#retryLocate').addEventListener('click', () => {
+    locate().catch((error) => {
+      $('#locationState').textContent =
+        `Location unavailable (${error?.code ?? error?.message ?? error}). Enter coordinates instead.`;
+    });
+  });
 
+  const restored = await recall();
   try {
     await locate();
-    setState(`Ready — ${STATE_NAMES[glasses.state] ?? 'glasses connected'}`, 'ready');
   } catch (error) {
-    setState(`Location unavailable: ${error?.code ?? error?.message ?? error}`, 'error');
-    log('grant location permission, then reopen the plugin');
+    if (!restored) {
+      $('#locationState').textContent =
+        `Location unavailable (${error?.code ?? error?.message ?? error}). Enter coordinates instead.`;
+      log('no location: type coordinates and press Use these coordinates');
+    }
   }
+  setState(`Ready — ${STATE_NAMES[glasses.state] ?? 'glasses connected'}`, 'ready');
 
   /* One timer drives both halves: recompute the sky, then push it down. */
   pushTimer = setInterval(() => {

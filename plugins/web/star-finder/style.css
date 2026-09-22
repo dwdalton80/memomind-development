@@ -94,6 +94,41 @@ h2 {
   font-variant-numeric: tabular-nums;
 }
 
+.coords { display: flex; gap: 8px; margin-bottom: 10px; }
+.coords label {
+  flex: 1 1 0;
+  min-width: 0;
+  font-size: 0.72rem;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+.coords input {
+  display: block;
+  width: 100%;
+  min-height: 42px;
+  margin-top: 4px;
+  padding: 0 10px;
+  border: 1px solid var(--line);
+  border-radius: 9px;
+  background: #0a0c0f;
+  color: var(--fg);
+  font: inherit;
+  font-variant-numeric: tabular-nums;
+}
+.coords input:focus { outline: none; border-color: var(--accent); }
+
+#location .actions button {
+  min-height: 42px;
+  border-radius: 9px;
+  border: 1px solid var(--line);
+  background: #1a1d26;
+  color: var(--fg);
+  font: inherit;
+  cursor: pointer;
+}
+#location .actions button:hover { border-color: var(--accent); }
+
 #realign {
   min-height: 42px;
   width: 100%;
